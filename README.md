@@ -11,6 +11,15 @@ The geometry layer does not claim that an infrared image is a depth camera.
 Metric stereo requires a calibrated rig: intrinsics for both cameras and the
 relative rotation and translation between them. Without that calibration the
 correct state is `CALIBRATION_REQUIRED`, not a guessed distance.
+`calibration_state` answers that as a state so a caller can ask before
+showing a distance; the metric functions themselves refuse rather than guess.
+
+`screen_plane_intersection` reports where a ray meets one flat screen, as a
+world point and as a fraction of each screen edge. A curved display, or
+several monitors at different angles, is not this: each needs its own model
+rather than a plane fitted to it silently. The distance along the ray is
+reported and not constrained, because a minimum viewing distance belongs to a
+physical setup and not to this scale-free geometry.
 
 The tracker, GPU models, camera drivers, permissions, and UI are separate
 layers. This repository contains the lightweight CPU geometry kernel only;

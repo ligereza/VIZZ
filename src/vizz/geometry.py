@@ -81,6 +81,97 @@ class StereoRig:
         return baseline
 
 
+@dataclass(frozen=True)
+class ScreenPlane:
+    """A flat screen expressed in the same world frame as the rig.
+
+    `right_world` and `up_world` span the visible area from `origin_world`,
+    so their lengths carry the screen extent and an intersection can be
+    reported as a fraction of each edge. A curved or multi-monitor surface is
+    not this: it needs its own model rather than a plane fitted silently.
+    """
+
+    screen_id: str
+    origin_world: tuple[float, float, float]
+    right_world: tuple[float, float, float]
+    up_world: tuple[float, float, float]
+
+    def basis(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        if not self.screen_id.strip():
+            raise StereoGeometryError("screen_id is required")
+        origin = _finite_array("origin_world", self.origin_world, (3,))
+        right = _finite_array("right_world", self.right_world, (3,))
+        up = _finite_array("up_world", self.up_world, (3,))
+        if float(np.linalg.norm(right)) <= 1e-12 or float(np.linalg.norm(up)) <= 1e-12:
+            raise StereoGeometryError("screen edges must be non-zero")
+        normal = np.cross(right, up)
+        if float(np.linalg.norm(normal)) <= 1e-12:
+            raise StereoGeometryError("screen edges must not be parallel")
+        return origin, right, up, normal / float(np.linalg.norm(normal))
+
+
+def calibration_state(rig: StereoRig) -> dict[str, Any]:
+    """Report whether a rig can support metric stereo, without raising.
+
+    A caller deciding whether to show a distance at all needs this as a
+    state, not as an exception: without intrinsics for both cameras and their
+    relative pose the correct answer is `CALIBRATION_REQUIRED`, never a
+    guessed depth.
+    """
+
+    try:
+        baseline = rig.validate()
+    except StereoGeometryError as exc:
+        return {"status": "CALIBRATION_REQUIRED", "reason": str(exc), "camera_baseline_world": None}
+    return {"status": "METRIC_STEREO_READY", "reason": None, "camera_baseline_world": baseline}
+
+
+def screen_plane_intersection(
+    ray_origin: Sequence[float],
+    ray_direction: Sequence[float],
+    screen: ScreenPlane,
+    *,
+    require_inside: bool = False,
+) -> dict[str, Any]:
+    """Intersect one ray with a screen plane and report where it lands.
+
+    The result carries the world point, the distance travelled along the ray
+    and the position as a fraction of each screen edge. A ray parallel to the
+    plane, or one whose intersection does not lie ahead of its own origin, is
+    refused instead of being projected backwards onto the screen.
+
+    `distance_along_ray` is reported, not constrained: an origin sitting on
+    the plane yields a distance near zero rather than an error, because a
+    minimum viewing distance is a property of a physical setup and not of
+    this scale-free geometry. A caller that needs one should assert it.
+    """
+
+    origin = _finite_array("ray_origin", ray_origin, (3,))
+    direction = _unit("ray_direction", ray_direction)
+    screen_origin, right, up, normal = screen.basis()
+    denominator = float(np.dot(direction, normal))
+    if abs(denominator) <= 1e-12:
+        raise StereoGeometryError("ray is parallel to the screen plane")
+    distance = float(np.dot(screen_origin - origin, normal) / denominator)
+    if distance <= 0.0:
+        raise StereoGeometryError("screen plane does not lie ahead of the ray origin")
+    point = origin + distance * direction
+    offset = point - screen_origin
+    horizontal = float(np.dot(offset, right) / np.dot(right, right))
+    vertical = float(np.dot(offset, up) / np.dot(up, up))
+    inside = 0.0 <= horizontal <= 1.0 and 0.0 <= vertical <= 1.0
+    if require_inside and not inside:
+        raise StereoGeometryError("intersection lies outside the screen bounds")
+    return {
+        "screen_id": screen.screen_id,
+        "point_world": [float(value) for value in point],
+        "distance_along_ray": distance,
+        "screen_fraction": [horizontal, vertical],
+        "inside_screen": inside,
+        "status": "SCREEN_PLANE_INTERSECTION",
+    }
+
+
 def ray_from_pixel(camera: CameraModel, pixel: Sequence[float]) -> tuple[np.ndarray, np.ndarray]:
     """Return `(origin_world, unit_direction_world)` for an undistorted pixel."""
 
