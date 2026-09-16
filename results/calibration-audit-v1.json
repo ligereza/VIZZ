@@ -1,0 +1,23 @@
+{
+  "calibration_audit_required": true,
+  "camera_baseline_world": 0.2,
+  "controls": {
+    "depth_publication": false,
+    "frames_captured": false,
+    "frames_stored": false,
+    "network_contact": false
+  },
+  "evidence": {
+    "basis": "caller_supplied_camera_model",
+    "physical_intrinsics_observed": false,
+    "physical_pose_observed": false,
+    "provenance_ref": "experiments/audit_model_calibration.py",
+    "real_camera_calibration_claim": false,
+    "scope": "synthetic_only"
+  },
+  "geometry_status": "METRIC_STEREO_READY",
+  "metric_depth_authorized": false,
+  "reason": "model parameters are valid, but no physical calibration evidence was observed",
+  "schema": "vizz-calibration-audit-v1",
+  "status": "CALIBRATION_EVIDENCE_REQUIRED"
+}

@@ -1,0 +1,42 @@
+{
+  "schema": "vizz-capture-surface-probe-v1",
+  "scope": "capability_listing_only",
+  "nodes": [
+    {
+      "path": "/dev/video0",
+      "sysfs_name": "Integrated_Webcam_HD: Integrate",
+      "probe_exit_code": 1,
+      "capabilities_listed": true,
+      "formats": [
+        "[video4linux2,v4l2 @ 0x55e924b00880] Compressed:       mjpeg :          Motion-JPEG : 1280x720 848x480 960x540 640x480 640x360",
+        "[video4linux2,v4l2 @ 0x55e924b00880] Raw       :     yuyv422 :           YUYV 4:2:2 : 640x480 160x120 320x180 320x240 424x240 640x360 1280x720"
+      ]
+    },
+    {
+      "path": "/dev/video1",
+      "sysfs_name": "Integrated_Webcam_HD: Integrate",
+      "probe_exit_code": 1,
+      "capabilities_listed": false,
+      "formats": []
+    }
+  ],
+  "calibration_state": "CALIBRATION_REQUIRED",
+  "controls": {
+    "frames_captured": false,
+    "frames_stored": false,
+    "network_contact": false,
+    "intrinsics_observed": false,
+    "pose_observed": false
+  },
+  "findings": {
+    "video_nodes_present": true,
+    "capabilities_listed_without_frames": true,
+    "calibration_data_available": false,
+    "metric_depth_authorized": false
+  },
+  "limitations": [
+    "Device presence and advertised formats do not provide camera intrinsics or stereo pose.",
+    "Both nodes may belong to one physical webcam; node count is not camera count.",
+    "No frame was captured or stored by this probe."
+  ]
+}

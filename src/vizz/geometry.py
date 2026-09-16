@@ -19,6 +19,9 @@ class StereoGeometryError(ValueError):
     """The rig or an observation cannot support a metric result."""
 
 
+CALIBRATION_AUDIT_SCHEMA = "vizz-calibration-audit-v1"
+
+
 def _finite_array(name: str, value: Any, shape: tuple[int, ...]) -> np.ndarray:
     array = np.asarray(value, dtype=np.float64)
     if array.shape != shape or not np.all(np.isfinite(array)):
@@ -122,8 +125,134 @@ def calibration_state(rig: StereoRig) -> dict[str, Any]:
     try:
         baseline = rig.validate()
     except StereoGeometryError as exc:
-        return {"status": "CALIBRATION_REQUIRED", "reason": str(exc), "camera_baseline_world": None}
-    return {"status": "METRIC_STEREO_READY", "reason": None, "camera_baseline_world": baseline}
+        return {
+            "status": "CALIBRATION_REQUIRED",
+            "reason": str(exc),
+            "camera_baseline_world": None,
+            "metric_depth_authorized": False,
+            "calibration_audit_required": True,
+        }
+    return {
+        "status": "METRIC_STEREO_READY",
+        "reason": None,
+        "camera_baseline_world": baseline,
+        "metric_depth_authorized": False,
+        "calibration_audit_required": True,
+    }
+
+
+def calibration_audit(
+    rig: StereoRig,
+    *,
+    evidence_scope: str = "physical_calibration_required",
+    provenance_ref: str | None = None,
+) -> dict[str, Any]:
+    """Separate valid model geometry from physical calibration evidence.
+
+    A caller can supply numerically valid intrinsics and pose without having
+    observed either camera in a calibration procedure. This report refuses to
+    turn those parameters into permission to show metric depth. A future
+    calibration pipeline may add a separately validated evidence record; this
+    kernel has no such record today.
+
+    ``evidence_scope`` is a declaration by the caller, never inferred from
+    matrices, camera names or baseline. Synthetic fixtures must identify their
+    source with ``provenance_ref``; the default keeps physical calibration
+    required. Neither scope authorizes metric depth.
+    """
+
+    allowed_scopes = {"synthetic_only", "physical_calibration_required"}
+    if evidence_scope not in allowed_scopes:
+        raise StereoGeometryError("evidence_scope must be synthetic_only or physical_calibration_required")
+    if provenance_ref is not None:
+        if not isinstance(provenance_ref, str) or not provenance_ref.strip():
+            raise StereoGeometryError("provenance_ref must be a non-empty string or None")
+        provenance_ref = provenance_ref.strip()
+    if evidence_scope == "synthetic_only" and provenance_ref is None:
+        raise StereoGeometryError("synthetic_only requires provenance_ref")
+    state = calibration_state(rig)
+    geometry_ready = state["status"] == "METRIC_STEREO_READY"
+    result = {
+        "schema": CALIBRATION_AUDIT_SCHEMA,
+        "status": "CALIBRATION_EVIDENCE_REQUIRED" if geometry_ready else "CALIBRATION_REQUIRED",
+        "geometry_status": state["status"],
+        "reason": (
+            "model parameters are valid, but no physical calibration evidence was observed"
+            if geometry_ready else state["reason"]
+        ),
+        "camera_baseline_world": state["camera_baseline_world"],
+        "metric_depth_authorized": False,
+        "calibration_audit_required": True,
+        "evidence": {
+            "basis": "caller_supplied_camera_model",
+            "scope": evidence_scope,
+            "provenance_ref": provenance_ref,
+            "physical_intrinsics_observed": False,
+            "physical_pose_observed": False,
+            "real_camera_calibration_claim": False,
+        },
+        "controls": {
+            "frames_captured": False,
+            "frames_stored": False,
+            "network_contact": False,
+            "depth_publication": False,
+        },
+    }
+    validate_calibration_audit(result)
+    return result
+
+
+def validate_calibration_audit(payload: dict[str, Any]) -> bool:
+    """Validate the evidence boundary without reading hardware or files."""
+
+    if not isinstance(payload, dict) or payload.get("schema") != CALIBRATION_AUDIT_SCHEMA:
+        raise StereoGeometryError("calibration audit schema is invalid")
+    expected = {
+        "schema", "status", "geometry_status", "reason", "camera_baseline_world",
+        "metric_depth_authorized", "calibration_audit_required", "evidence", "controls",
+    }
+    if set(payload) != expected:
+        raise StereoGeometryError("calibration audit fields are invalid")
+    status = payload["status"]
+    geometry_status = payload["geometry_status"]
+    if geometry_status not in {"METRIC_STEREO_READY", "CALIBRATION_REQUIRED"}:
+        raise StereoGeometryError("calibration audit geometry status is invalid")
+    if status not in {"CALIBRATION_EVIDENCE_REQUIRED", "CALIBRATION_REQUIRED"}:
+        raise StereoGeometryError("calibration audit status is invalid")
+    baseline = payload["camera_baseline_world"]
+    if geometry_status == "METRIC_STEREO_READY":
+        if status != "CALIBRATION_EVIDENCE_REQUIRED" or not isinstance(baseline, (int, float)) or not math.isfinite(float(baseline)) or baseline <= 0:
+            raise StereoGeometryError("calibration audit ready geometry is inconsistent")
+    elif status != "CALIBRATION_REQUIRED" or baseline is not None:
+        raise StereoGeometryError("calibration audit required geometry is inconsistent")
+    if payload["metric_depth_authorized"] is not False or payload["calibration_audit_required"] is not True:
+        raise StereoGeometryError("calibration audit authorization flags are invalid")
+    evidence = payload["evidence"]
+    if not isinstance(evidence, dict) or set(evidence) != {
+        "basis", "scope", "provenance_ref", "physical_intrinsics_observed",
+        "physical_pose_observed", "real_camera_calibration_claim",
+    }:
+        raise StereoGeometryError("calibration audit evidence is invalid")
+    if evidence["basis"] != "caller_supplied_camera_model":
+        raise StereoGeometryError("calibration audit evidence basis is invalid")
+    if evidence["scope"] not in {"synthetic_only", "physical_calibration_required"}:
+        raise StereoGeometryError("calibration audit evidence scope is invalid")
+    provenance_ref = evidence["provenance_ref"]
+    if provenance_ref is not None and (not isinstance(provenance_ref, str) or not provenance_ref.strip()):
+        raise StereoGeometryError("calibration audit provenance is invalid")
+    if evidence["scope"] == "synthetic_only" and provenance_ref is None:
+        raise StereoGeometryError("synthetic_only requires provenance_ref")
+    for field in ("physical_intrinsics_observed", "physical_pose_observed", "real_camera_calibration_claim"):
+        if evidence[field] is not False:
+            raise StereoGeometryError("calibration audit physical evidence is invalid")
+    if payload["controls"] != {
+        "frames_captured": False,
+        "frames_stored": False,
+        "network_contact": False,
+        "depth_publication": False,
+    }:
+        raise StereoGeometryError("calibration audit controls are invalid")
+    return True
 
 
 def screen_plane_intersection(
@@ -191,8 +320,14 @@ def triangulate_rays(
     ray_b: tuple[Sequence[float], Sequence[float]],
     *,
     max_residual: float | None = None,
+    max_condition_number: float | None = None,
 ) -> dict[str, Any]:
-    """Find the closest midpoint between two rays and report geometry quality."""
+    """Find the closest midpoint between two rays and report geometry quality.
+
+    A small angle between the rays makes depth sensitive to tiny image or pose
+    errors.  The condition number exposes that risk and an optional ceiling
+    lets a caller refuse a result whose geometry is too poorly conditioned.
+    """
 
     origin_a = _finite_array("ray_a origin", ray_a[0], (3,))
     direction_a = _unit("ray_a direction", ray_a[1])
@@ -202,6 +337,13 @@ def triangulate_rays(
     parameters, _, rank, _ = np.linalg.lstsq(matrix, origin_b - origin_a, rcond=None)
     if rank < 2:
         raise StereoGeometryError("rays are parallel or degenerate")
+    singular_values = np.linalg.svd(matrix, compute_uv=False)
+    condition_number = float(singular_values[0] / singular_values[-1])
+    if max_condition_number is not None:
+        if not math.isfinite(max_condition_number) or max_condition_number <= 0.0:
+            raise StereoGeometryError("max_condition_number must be finite and positive")
+        if condition_number > max_condition_number:
+            raise StereoGeometryError("ray condition number exceeds threshold")
     point_a = origin_a + parameters[0] * direction_a
     point_b = origin_b + parameters[1] * direction_b
     midpoint = (point_a + point_b) / 2.0
@@ -217,6 +359,7 @@ def triangulate_rays(
         "depth_b": float(parameters[1]),
         "ray_residual": residual,
         "ray_angle_deg": angle,
+        "ray_condition_number": condition_number,
         "status": "METRIC_STEREO_POINT",
     }
 
@@ -227,6 +370,7 @@ def binocular_measurement(
     eyes_b: dict[str, Sequence[float]],
     *,
     max_residual: float | None = None,
+    max_condition_number: float | None = None,
 ) -> dict[str, Any]:
     """Triangulate corresponding left/right eyes and measure 3-D separation."""
 
@@ -240,6 +384,7 @@ def binocular_measurement(
             ray_from_pixel(rig.camera_a, eyes_a[eye]),
             ray_from_pixel(rig.camera_b, eyes_b[eye]),
             max_residual=max_residual,
+            max_condition_number=max_condition_number,
         )
     left = np.asarray(points["left"]["point_world"], dtype=np.float64)
     right = np.asarray(points["right"]["point_world"], dtype=np.float64)
@@ -250,5 +395,7 @@ def binocular_measurement(
         "eye_midpoint_world": [float(value) for value in midpoint],
         "interocular_distance_world": float(np.linalg.norm(right - left)),
         "camera_baseline_world": baseline,
+        "metric_depth_authorized": False,
+        "calibration_audit_required": True,
         "status": "BINOCULAR_MEASUREMENT",
     }

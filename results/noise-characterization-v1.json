@@ -1,0 +1,133 @@
+{
+  "schema": "vizz-noise-characterization-v1",
+  "scope": "synthetic_only",
+  "truth": {
+    "point_world": [
+      0.064,
+      0.0,
+      1.0
+    ],
+    "intrinsics": "800px focal length, principal point (320,240)"
+  },
+  "pixel_perturbation": [
+    {
+      "pixel_delta_b_x": 0.0,
+      "point_world": [
+        0.064,
+        0.0,
+        0.9999999999999993
+      ],
+      "point_error_world": 6.661338147750939e-16,
+      "depth_a": 1.0020459071320027,
+      "ray_residual": 3.5571561302006606e-16,
+      "ray_angle_deg": 11.40664612194269,
+      "ray_condition_number": 10.012831845985398
+    },
+    {
+      "pixel_delta_b_x": 0.25,
+      "point_world": [
+        0.0641001564945227,
+        0.0,
+        1.0015649452269164
+      ],
+      "point_error_world": 0.001568146959517361,
+      "depth_a": 1.0036140540915208,
+      "ray_residual": 2.618455766672135e-16,
+      "ray_angle_deg": 11.389065613322591,
+      "ray_condition_number": 10.02839045164511
+    },
+    {
+      "pixel_delta_b_x": 0.5,
+      "point_world": [
+        0.06420062695924766,
+        0.0,
+        1.0031347962382442
+      ],
+      "point_error_world": 0.0031412097402254016,
+      "depth_a": 1.005187116872229,
+      "ray_residual": 6.938893903907228e-17,
+      "ray_angle_deg": 11.371483640685122,
+      "ray_condition_number": 10.043998307928076
+    },
+    {
+      "pixel_delta_b_x": 1.0,
+      "point_world": [
+        0.06440251572327046,
+        0.0,
+        1.0062893081760997
+      ],
+      "point_error_world": 0.006302175516552595,
+      "depth_a": 1.0083480826485562,
+      "ray_residual": 1.8041124150158794e-16,
+      "ray_angle_deg": 11.336315315874769,
+      "ray_condition_number": 10.07536270185976
+    }
+  ],
+  "orthogonal_pixel_perturbation": {
+    "pixel_delta_b_y": 0.5,
+    "point_world": [
+      0.06400035699899939,
+      0.0003124969357722343,
+      0.999990256970537
+    ],
+    "point_error_world": 0.00031264898678620126,
+    "depth_a": 1.0020362067964623,
+    "ray_residual": 0.0006249969357647225,
+    "ray_angle_deg": 11.406700580427552,
+    "ray_condition_number": 10.01278372493881
+  },
+  "baseline_sweep": [
+    {
+      "baseline_world": 0.2,
+      "point_world": [
+        4.163336342344337e-17,
+        0.0,
+        0.9999999999999997
+      ],
+      "point_error_world": 3.356589068483857e-16,
+      "depth_a": 0.9999999999999997,
+      "ray_residual": 8.326672684688674e-17,
+      "ray_angle_deg": 11.309932474020195,
+      "ray_condition_number": 10.099019513592786
+    },
+    {
+      "baseline_world": 0.1,
+      "point_world": [
+        0.0,
+        0.0,
+        0.9999999999999998
+      ],
+      "point_error_world": 2.220446049250313e-16,
+      "depth_a": 0.9999999999999997,
+      "ray_residual": 3.3306690738754696e-16,
+      "ray_angle_deg": 5.710593137499568,
+      "ray_condition_number": 20.049875621120886
+    },
+    {
+      "baseline_world": 0.02,
+      "point_world": [
+        -1.9081958235744878e-17,
+        0.0,
+        1.0000000000000018
+      ],
+      "point_error_world": 1.7764593274303122e-15,
+      "depth_a": 1.0000000000000018,
+      "ray_residual": 2.2530044628618934e-16,
+      "ray_angle_deg": 1.1457628381748262,
+      "ray_condition_number": 100.00999900020018
+    }
+  ],
+  "findings": {
+    "pixel_perturbation_changes_estimate": true,
+    "residual_alone_can_be_small_under_coplanar_pixel_error": true,
+    "orthogonal_pixel_error_is_visible_in_residual": true,
+    "shorter_baseline_increases_condition": true,
+    "shorter_baseline_angle_decreases": true,
+    "real_camera_calibration_claim": false
+  },
+  "limitations": [
+    "The sweep uses exact synthetic cameras and a deterministic pixel perturbation; it is not a camera-noise distribution.",
+    "Residual can remain near zero for coplanar horizontal pixel error, so residual and condition must be read together.",
+    "Threshold selection remains a rig-level policy and is not inferred from this fixture."
+  ]
+}

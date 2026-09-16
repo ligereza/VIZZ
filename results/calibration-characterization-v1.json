@@ -1,0 +1,67 @@
+{
+  "schema": "vizz-calibration-characterization-v1",
+  "scope": "synthetic_only",
+  "truth": {
+    "point_world": [
+      0.064,
+      0.05,
+      1.0
+    ],
+    "true_baseline_world": 0.2,
+    "pixel_a": [
+      371.2,
+      280.0
+    ],
+    "pixel_b": [
+      211.2,
+      280.0
+    ]
+  },
+  "estimates": {
+    "clean": {
+      "point_world": [
+        0.06399999999999995,
+        0.050000000000000086,
+        1.0000000000000018
+      ],
+      "point_error_world": 1.779173531894756e-15,
+      "ray_residual": 5.555016879717332e-16,
+      "ray_angle_deg": 11.392543956000278,
+      "ray_condition_number": 10.025308349079284
+    },
+    "focal_length_plus_1_percent": {
+      "point_world": [
+        0.06443295718161961,
+        0.05008918032452825,
+        1.0067676661722538
+      ],
+      "point_error_world": 0.006782087471455008,
+      "ray_residual": 0.0004977856745538563,
+      "ray_angle_deg": 11.31709299069456,
+      "ray_condition_number": 10.092587993447955
+    },
+    "camera_b_yaw_plus_0_5_deg": {
+      "point_world": [
+        0.06697271390636433,
+        0.05229248272294797,
+        1.0464500109203647
+      ],
+      "point_error_world": 0.046601459413907934,
+      "ray_residual": 5.996074470462889e-05,
+      "ray_angle_deg": 10.893167555727306,
+      "ray_condition_number": 10.487875007171914
+    }
+  },
+  "findings": {
+    "focal_error_changes_point": true,
+    "pose_error_changes_point": true,
+    "clean_residual_is_near_zero": true,
+    "calibration_error_not_hidden": true,
+    "real_camera_calibration_claim": false
+  },
+  "limitations": [
+    "The true cameras and observations are synthetic; this does not estimate a real rig's calibration uncertainty.",
+    "The perturbations are one focal-length and one yaw fixture, not a statistical error model.",
+    "Threshold selection remains a rig-level policy and is not inferred from this report."
+  ]
+}

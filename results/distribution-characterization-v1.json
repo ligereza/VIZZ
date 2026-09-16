@@ -1,0 +1,62 @@
+{
+  "schema": "vizz-distribution-characterization-v1",
+  "scope": "synthetic_only",
+  "sampling": {
+    "seed": 20260913,
+    "requested": 100,
+    "succeeded": 100,
+    "failed_closed": 0,
+    "pixel_noise_sigma_px": 0.2,
+    "focal_sigma_fraction": 0.002,
+    "yaw_sigma_deg": 0.1
+  },
+  "truth": {
+    "point_world": [
+      0.064,
+      0.05,
+      1.0
+    ],
+    "baseline_world": 0.2,
+    "pixel_a": [
+      371.2,
+      280.0
+    ],
+    "pixel_b": [
+      211.2,
+      280.0
+    ]
+  },
+  "statistics": {
+    "point_error_world": {
+      "min": 0.0002762592265849289,
+      "median": 0.0054534451276848205,
+      "p95": 0.0167895338073527,
+      "max": 0.020955928101028462
+    },
+    "ray_residual": {
+      "min": 2.6417623217448383e-06,
+      "median": 0.00023655478740456688,
+      "p95": 0.0007100359009397782,
+      "max": 0.0010431931905968074
+    },
+    "ray_condition_number": {
+      "min": 9.835518286398147,
+      "median": 10.010028368602859,
+      "p95": 10.173723747077073,
+      "max": 10.233118565589539
+    }
+  },
+  "failures": [],
+  "findings": {
+    "all_samples_accounted_for": true,
+    "finite_statistics": true,
+    "error_distribution_nonzero": true,
+    "condition_distribution_reported": true,
+    "real_camera_calibration_claim": false
+  },
+  "limitations": [
+    "The distribution is seeded synthetic noise plus calibration perturbation, not a measured camera error distribution.",
+    "The p95 values describe this fixture only and are not production thresholds.",
+    "No semantic or ophthalmological interpretation is made."
+  ]
+}
